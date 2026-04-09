@@ -20,6 +20,7 @@ export function createDefaultGroups(totalChannels: number = 96): ChannelGroup[] 
     const startChannel = i * groupSize
     const remaining = totalChannels - startChannel
     const channels = Array.from({ length: Math.min(groupSize, remaining) }, (_, j) => startChannel + j)
+    const isRemainder = channels.length < groupSize
     groups.push({
       id: `group-${i}`,
       name: totalChannels > 48
@@ -27,7 +28,7 @@ export function createDefaultGroups(totalChannels: number = 96): ChannelGroup[] 
         : `CH ${startChannel + 1}-${startChannel + channels.length}`,
       channels,
       reversed: false,
-      visible: true,
+      visible: !isRemainder,
     })
   }
 

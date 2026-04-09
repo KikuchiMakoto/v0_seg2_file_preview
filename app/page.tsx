@@ -17,7 +17,7 @@ export default function SEG2Viewer() {
   const [fileName, setFileName] = useState<string | null>(null)
   const [channelGroups, setChannelGroups] = useState<ChannelGroup[]>([])
   const [gainMode, setGainMode] = useState<GainMode>("agc")
-  const [fixedGain, setFixedGain] = useState(1)
+  const [fixedGain, setFixedGain] = useState(10)
   const [filterSettings, setFilterSettings] = useState<FilterSettings>({
     enabled: true,
     highpassHz: 5,

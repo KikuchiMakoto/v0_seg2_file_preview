@@ -81,14 +81,14 @@ export function GainControls({
           <Slider
             value={[fixedGain]}
             onValueChange={([value]) => onFixedGainChange(value)}
-            min={0.1}
-            max={10}
-            step={0.1}
+            min={1}
+            max={100}
+            step={1}
             className="w-full"
           />
           <div className="flex justify-between mt-0.5">
-            <span className="text-[10px] text-slate-500">0.1x</span>
-            <span className="text-[10px] text-slate-500">10x</span>
+            <span className="text-[10px] text-slate-500">1x</span>
+            <span className="text-[10px] text-slate-500">100x</span>
           </div>
         </div>
       )}

@@ -1,0 +1,9 @@
+node_modules/
+# bun - comment out if needed for CI
+# bun.lock
+.env
+.next/
+out/
+dist/
+build/
+*.log

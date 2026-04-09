@@ -8,27 +8,22 @@ Next.jsベースのファイルプレビューアプリケーション
 - **UI**: React 19.2.4
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
-- **Package Manager**: pnpm
+- **Runtime**: Bun
 
 ## 前提条件
 
-- Node.js 18.17以上
-- pnpm
+- Bun 1.0以上
 
 ## インストール
 
 ```bash
-# pnpmが未インストールの場合
-npm install -g pnpm
-
-# 依存関係のインストール
-pnpm install
+bun install
 ```
 
 ## 開発
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 [http://localhost:3000](http://localhost:3000) で開発サーバーが起動します。
@@ -36,19 +31,13 @@ pnpm dev
 ## ビルド
 
 ```bash
-pnpm build
+bun run build
 ```
 
 ## 本番実行
 
 ```bash
-pnpm start
-```
-
-## リント
-
-```bash
-pnpm lint
+bun start
 ```
 
 ## プロジェクト構造

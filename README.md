@@ -1,6 +1,7 @@
 # File Preview
 
 Next.jsベースのファイルプレビューアプリケーション
+https://kikuchimakoto.github.io/v0_seg2_file_preview/
 
 ## 技術スタック
 

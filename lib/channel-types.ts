@@ -10,16 +10,21 @@ export interface ChannelGroup {
 
 // Create default 8 groups of 12 channels each (for 96ch data)
 export function createDefaultGroups(totalChannels: number = 96): ChannelGroup[] {
-  const groupSize = 12
-  const numGroups = Math.floor(totalChannels / groupSize)
+  if (totalChannels <= 0) return []
+
+  const groupSize = totalChannels > 48 ? 12 : totalChannels > 12 ? 6 : totalChannels
+  const numGroups = Math.ceil(totalChannels / groupSize)
   const groups: ChannelGroup[] = []
 
   for (let i = 0; i < numGroups; i++) {
     const startChannel = i * groupSize
-    const channels = Array.from({ length: groupSize }, (_, j) => startChannel + j)
+    const remaining = totalChannels - startChannel
+    const channels = Array.from({ length: Math.min(groupSize, remaining) }, (_, j) => startChannel + j)
     groups.push({
       id: `group-${i}`,
-      name: `Cable ${i + 1} (CH ${startChannel + 1}-${startChannel + groupSize})`,
+      name: totalChannels > 48
+        ? `Cable ${i + 1} (CH ${startChannel + 1}-${startChannel + channels.length})`
+        : `CH ${startChannel + 1}-${startChannel + channels.length}`,
       channels,
       reversed: false,
       visible: true,

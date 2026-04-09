@@ -60,8 +60,7 @@ export default function SEG2Viewer() {
       setFileName(name)
 
       const totalTraces = data.traces.length
-      const displayableTraces = Math.floor(totalTraces / 48) * 48
-      const groupableTraces = Math.min(displayableTraces, 96)
+      const groupableTraces = totalTraces
 
       // Keep channel groups if trace count matches, otherwise reset
       const previousGroupableTraces = channelGroups.reduce((sum, g) => sum + g.channels.length, 0)

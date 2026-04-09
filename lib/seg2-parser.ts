@@ -127,20 +127,23 @@ export class SEG2Parser {
       if (bytes[i] === 0) {
         if (currentData.length > 1) {
           try {
-            const str = new TextDecoder('ascii').decode(new Uint8Array(currentData))
-            if (str.trim().length > 0) {
-              // Parse key=value or key value format
-              const eqIndex = str.indexOf("=")
-              const spaceIndex = str.indexOf(" ")
-              
-              if (eqIndex > 0) {
-                const key = str.substring(0, eqIndex).trim()
-                const value = str.substring(eqIndex + 1).trim()
-                result[key] = value
-              } else if (spaceIndex > 0) {
-                const key = str.substring(0, spaceIndex).trim()
-                const value = str.substring(spaceIndex + 1).trim()
-                result[key] = value
+            // Filter out non-printable ASCII (< 0x20 except common whitespace)
+            const filtered = currentData.filter(b => b >= 0x20 && b < 0x7F)
+            if (filtered.length > 1) {
+              const str = new TextDecoder('ascii').decode(new Uint8Array(filtered)).trim()
+              if (str.length > 0) {
+                const eqIndex = str.indexOf("=")
+                const spaceIndex = str.indexOf(" ")
+                
+                if (eqIndex > 0) {
+                  const key = str.substring(0, eqIndex).trim()
+                  const value = str.substring(eqIndex + 1).trim()
+                  if (key.length > 0) result[key] = value
+                } else if (spaceIndex > 0) {
+                  const key = str.substring(0, spaceIndex).trim()
+                  const value = str.substring(spaceIndex + 1).trim()
+                  if (key.length > 0) result[key] = value
+                }
               }
             }
           } catch {

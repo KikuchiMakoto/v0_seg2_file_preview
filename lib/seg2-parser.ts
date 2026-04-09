@@ -32,11 +32,37 @@ export class SEG2Parser {
   private buffer: ArrayBuffer
   private view: DataView
   private littleEndian: boolean = true
+  public debug: { [key: string]: unknown } = {}
 
   constructor(buffer: ArrayBuffer) {
     this.buffer = buffer
     this.view = new DataView(buffer)
     this.detectEndianness()
+  }
+
+  public hexdump(start: number, length: number): string {
+    const bytes: string[] = []
+    for (let i = start; i < Math.min(start + length, this.buffer.byteLength); i += 16) {
+      const line: string[] = []
+      line.push(i.toString(16).padStart(8, "0") + "  ")
+      for (let j = 0; j < 16; j++) {
+        if (i + j < this.buffer.byteLength) {
+          const b = this.view.getUint8(i + j)
+          line.push(b.toString(16).padStart(2, "0") + " ")
+        } else {
+          line.push("   ")
+        }
+        if (j === 7) line.push(" ")
+      }
+      line.push(" |")
+      for (let j = 0; j < 16 && i + j < this.buffer.byteLength; j++) {
+        const b = this.view.getUint8(i + j)
+        line.push(b >= 32 && b < 127 ? String.fromCharCode(b) : ".")
+      }
+      line.push("|")
+      bytes.push(line.join(""))
+    }
+    return bytes.join("\n")
   }
 
   private detectEndianness(): void {
@@ -91,18 +117,37 @@ export class SEG2Parser {
     const result: Record<string, string> = {}
     let currentOffset = offset
 
-    while (currentOffset < endOffset) {
+    while (currentOffset < endOffset && currentOffset < this.buffer.byteLength) {
+      if (currentOffset + 2 > this.buffer.byteLength) break
       const stringLength = this.readUint16(currentOffset)
-      if (stringLength === 0) break
+      if (stringLength === 0 || stringLength > 1000) break
 
       currentOffset += 2
+      if (currentOffset + stringLength - 2 > this.buffer.byteLength) break
+      
       const stringContent = this.readString(currentOffset, stringLength - 2)
       currentOffset += stringLength - 2
 
-      const separatorIndex = stringContent.indexOf(" ")
-      if (separatorIndex > 0) {
-        const key = stringContent.substring(0, separatorIndex).trim()
-        const value = stringContent.substring(separatorIndex + 1).trim()
+      // Try multiple separators: '=', ':', whitespace
+      let key = ""
+      let value = ""
+      
+      const eqIndex = stringContent.indexOf("=")
+      const colonIndex = stringContent.indexOf(":")
+      const spaceIndex = stringContent.indexOf(" ")
+
+      if (eqIndex > 0) {
+        key = stringContent.substring(0, eqIndex).trim()
+        value = stringContent.substring(eqIndex + 1).trim()
+      } else if (colonIndex > 0) {
+        key = stringContent.substring(0, colonIndex).trim()
+        value = stringContent.substring(colonIndex + 1).trim()
+      } else if (spaceIndex > 0) {
+        key = stringContent.substring(0, spaceIndex).trim()
+        value = stringContent.substring(spaceIndex + 1).trim()
+      }
+
+      if (key) {
         result[key] = value
       }
     }
@@ -126,15 +171,32 @@ export class SEG2Parser {
       String.fromCharCode(stringTerminatorByte1) + (sizeOfStringTerminator > 1 ? String.fromCharCode(stringTerminatorByte2) : "")
     const lineTerminator = String.fromCharCode(lineTerminatorByte1) + String.fromCharCode(lineTerminatorByte2)
 
+    this.debug = {
+      fileDescriptorBlockId: `0x${fileDescriptorBlockId.toString(16)}`,
+      revisionNumber,
+      sizeOfTracePointerSubBlock,
+      numberOfTraces,
+      sizeOfStringTerminator,
+      stringTerminatorCharCodes: [stringTerminatorByte1, stringTerminatorByte2],
+      lineTerminatorCharCodes: [lineTerminatorByte1, lineTerminatorByte2],
+      littleEndian: this.littleEndian,
+      fileSize: this.buffer.byteLength,
+    }
+
     const tracePointers: number[] = []
     for (let i = 0; i < numberOfTraces; i++) {
       const pointerOffset = 32 + i * 4
-      tracePointers.push(this.readUint32(pointerOffset))
+      const ptr = this.readUint32(pointerOffset)
+      tracePointers.push(ptr)
     }
+
+    this.debug.tracePointers = tracePointers
 
     const freeFormatOffset = 32 + sizeOfTracePointerSubBlock
     const freeFormatEnd = tracePointers[0] || this.buffer.byteLength
     const headerFreeFormatStrings = this.parseFreeFormatStrings(freeFormatOffset, freeFormatEnd)
+
+    this.debug.headerFreeFormatStrings = headerFreeFormatStrings
 
     const header: SEG2Header = {
       fileDescriptorBlockId,
@@ -150,18 +212,33 @@ export class SEG2Parser {
     const traces: SEG2Trace[] = []
     for (let i = 0; i < numberOfTraces; i++) {
       const traceOffset = tracePointers[i]
+      this.debug[`trace${i}_offset`] = traceOffset
       const trace = this.parseTrace(traceOffset)
       traces.push(trace)
     }
 
+    this.debug.traces = traces.map((t, i) => ({
+      index: i,
+      samples: t.data.length,
+      formatCode: t.dataFormatCode,
+      dataOffset: this.debug[`trace${i}_offset`] + (t as unknown as { sizeOfBlock: number }).sizeOfBlock,
+    }))
+
     // Extract sample rate from first trace
-    const sampleInterval = parseFloat(traces[0]?.freeFormatStrings["SAMPLE_INTERVAL"] || "0.001")
-    const sampleRate = 1 / sampleInterval
+    const sampleInterval = parseFloat(traces[0]?.freeFormatStrings["SAMPLE_INTERVAL"] || 
+                                   traces[0]?.freeFormatStrings["SI"] ||
+                                   traces[0]?.freeFormatStrings["SAMPLE_INTERVAL_MICROSECONDS"] ||
+                                   "1000")
+    const sampleRate = 1000000 / sampleInterval // Convert from microseconds
 
     return { header, traces, sampleRate }
   }
 
   private parseTrace(offset: number): SEG2Trace {
+    if (offset < 0 || offset + 32 > this.buffer.byteLength) {
+      throw new Error(`Invalid trace offset: ${offset}`)
+    }
+
     const traceDescriptorBlockId = this.readUint16(offset)
     const sizeOfBlock = this.readUint16(offset + 2)
     const sizeOfDataBlock = this.readUint32(offset + 4)
@@ -171,6 +248,17 @@ export class SEG2Parser {
     const freeFormatOffset = offset + 32
     const dataOffset = offset + sizeOfBlock
     const traceFreeFormatStrings = this.parseFreeFormatStrings(freeFormatOffset, dataOffset)
+
+    this.debug.lastTraceParsed = {
+      offset,
+      traceDescriptorBlockId: `0x${traceDescriptorBlockId.toString(16)}`,
+      sizeOfBlock,
+      sizeOfDataBlock,
+      numberOfSamplesInDataBlock,
+      dataFormatCode,
+      dataOffset,
+      freeFormatStrings: traceFreeFormatStrings,
+    }
 
     const data = this.parseTraceData(dataOffset, numberOfSamplesInDataBlock, dataFormatCode)
 

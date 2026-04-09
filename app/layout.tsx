@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -11,7 +10,6 @@ const basePath = process.env.NODE_ENV === 'production' ? '/v0_seg2_file_preview'
 export const metadata: Metadata = {
   title: 'SEG2 Waveform Viewer',
   description: 'Surface wave survey SEG2 file viewer with ObsPy-style waveform display',
-  generator: 'v0.app',
   icons: {
     icon: [
       {
@@ -40,7 +38,6 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans antialiased">
         {children}
-        <Analytics />
       </body>
     </html>
   )

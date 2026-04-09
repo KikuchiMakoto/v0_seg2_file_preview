@@ -43,6 +43,19 @@ export default function SEG2Viewer() {
     try {
       setError(null)
       const data = parseSEG2(buffer)
+      
+      // Debug output
+      console.log("=== SEG2 Debug Info ===")
+      console.log("Sample Rate:", data.sampleRate)
+      console.log("Number of traces:", data.traces.length)
+      if (data.traces[0]) {
+        console.log("First trace free strings:", data.traces[0].freeFormatStrings)
+        console.log("First trace samples:", data.traces[0].data.length)
+        console.log("First trace format:", data.traces[0].dataFormatCode)
+      }
+      console.log("Header free strings:", data.header.freeFormatStrings)
+      console.log("=======================")
+      
       setSeg2Data(data)
       setFileName(name)
 

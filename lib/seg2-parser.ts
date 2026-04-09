@@ -115,40 +115,41 @@ export class SEG2Parser {
     endOffset: number,
   ): Record<string, string> {
     const result: Record<string, string> = {}
-    let currentOffset = offset
-
-    while (currentOffset < endOffset && currentOffset < this.buffer.byteLength) {
-      if (currentOffset + 2 > this.buffer.byteLength) break
-      const stringLength = this.readUint16(currentOffset)
-      if (stringLength === 0 || stringLength > 1000) break
-
-      currentOffset += 2
-      if (currentOffset + stringLength - 2 > this.buffer.byteLength) break
-      
-      const stringContent = this.readString(currentOffset, stringLength - 2)
-      currentOffset += stringLength - 2
-
-      // Try multiple separators: '=', ':', whitespace
-      let key = ""
-      let value = ""
-      
-      const eqIndex = stringContent.indexOf("=")
-      const colonIndex = stringContent.indexOf(":")
-      const spaceIndex = stringContent.indexOf(" ")
-
-      if (eqIndex > 0) {
-        key = stringContent.substring(0, eqIndex).trim()
-        value = stringContent.substring(eqIndex + 1).trim()
-      } else if (colonIndex > 0) {
-        key = stringContent.substring(0, colonIndex).trim()
-        value = stringContent.substring(colonIndex + 1).trim()
-      } else if (spaceIndex > 0) {
-        key = stringContent.substring(0, spaceIndex).trim()
-        value = stringContent.substring(spaceIndex + 1).trim()
-      }
-
-      if (key) {
-        result[key] = value
+    
+    // Python implementation: split by null byte, decode each segment
+    const length = Math.min(endOffset - offset, this.buffer.byteLength - offset)
+    if (length <= 0) return result
+    
+    const bytes = new Uint8Array(this.buffer, offset, length)
+    
+    let currentData: number[] = []
+    for (let i = 0; i < bytes.length; i++) {
+      if (bytes[i] === 0) {
+        if (currentData.length > 1) {
+          try {
+            const str = new TextDecoder('ascii').decode(new Uint8Array(currentData))
+            if (str.trim().length > 0) {
+              // Parse key=value or key value format
+              const eqIndex = str.indexOf("=")
+              const spaceIndex = str.indexOf(" ")
+              
+              if (eqIndex > 0) {
+                const key = str.substring(0, eqIndex).trim()
+                const value = str.substring(eqIndex + 1).trim()
+                result[key] = value
+              } else if (spaceIndex > 0) {
+                const key = str.substring(0, spaceIndex).trim()
+                const value = str.substring(spaceIndex + 1).trim()
+                result[key] = value
+              }
+            }
+          } catch {
+            // Skip invalid strings
+          }
+        }
+        currentData = []
+      } else {
+        currentData.push(bytes[i])
       }
     }
 
@@ -224,13 +225,35 @@ export class SEG2Parser {
       dataOffset: this.debug[`trace${i}_offset`] + (t as unknown as { sizeOfBlock: number }).sizeOfBlock,
     }))
 
-    // Extract sample rate from first trace
-    const sampleInterval = parseFloat(traces[0]?.freeFormatStrings["SAMPLE_INTERVAL"] || 
-                                   traces[0]?.freeFormatStrings["SI"] ||
-                                   traces[0]?.freeFormatStrings["SAMPLE_INTERVAL_MICROSECONDS"] ||
-                                   "1000")
-    const sampleRate = 1000000 / sampleInterval // Convert from microseconds
+    // Extract sample rate from first trace - Python uses 1.0/interval
+    let sampleRate = 1000 // default 1000 Hz
+    
+    // Check all free format strings from first trace
+    const firstTraceStrings = traces[0]?.freeFormatStrings || {}
+    this.debug.firstTraceStrings = firstTraceStrings
+    
+    // Look for SAMPLE_INTERVAL
+    const sampleIntervalStr = firstTraceStrings["SAMPLE_INTERVAL"]
+    if (sampleIntervalStr) {
+      const interval = parseFloat(sampleIntervalStr)
+      if (interval > 0) {
+        sampleRate = Math.round(1.0 / interval)
+      }
+    }
+    
+    // Also check for common variations
+    if (sampleRate === 1000 || sampleRate === 0) {
+      // Try SI (alias)
+      const siStr = firstTraceStrings["SI"]
+      if (siStr) {
+        const interval = parseFloat(siStr)
+        if (interval > 0) {
+          sampleRate = Math.round(1.0 / interval)
+        }
+      }
+    }
 
+    this.debug.sampleRate = sampleRate
     return { header, traces, sampleRate }
   }
 

@@ -24,12 +24,12 @@ export function FileInfoPanel({ seg2Data, fileName, compact = false }: FileInfoP
 
       <dl className={`flex flex-col ${compact ? "gap-0.5 text-xs" : "gap-2 text-sm"}`}>
         <div className="flex justify-between">
-          <dt className="text-slate-400">Channel</dt>
+          <dt className="text-slate-400">Channels</dt>
           <dd className="text-slate-200 font-mono">{header.numberOfTraces}</dd>
         </div>
 
         <div className="flex justify-between">
-          <dt className="text-slate-400">SampleFreq</dt>
+          <dt className="text-slate-400">Sample Rate</dt>
           <dd className="text-slate-200 font-mono">{seg2Data.sampleRate.toFixed(0)} Hz</dd>
         </div>
 

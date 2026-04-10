@@ -19,13 +19,18 @@ export function FileInfoPanel({ seg2Data, fileName, compact = false }: FileInfoP
   const totalTime = numSamples / seg2Data.sampleRate
 
   return (
-    <div className="bg-slate-900 rounded-lg border border-slate-700 p-3">
-      <h3 className="text-xs font-medium text-slate-200 mb-2">File Info</h3>
+    <div className="bg-slate-900 rounded-lg border border-slate-700 p-2">
+      <h3 className="text-xs font-medium text-slate-200 mb-1.5">File Info</h3>
 
-      <dl className={`flex flex-col ${compact ? "gap-1 text-xs" : "gap-2 text-sm"}`}>
+      <dl className={`flex flex-col ${compact ? "gap-0.5 text-xs" : "gap-2 text-sm"}`}>
         <div className="flex justify-between">
-          <dt className="text-slate-400">Traces</dt>
+          <dt className="text-slate-400">Channels</dt>
           <dd className="text-slate-200 font-mono">{header.numberOfTraces}</dd>
+        </div>
+
+        <div className="flex justify-between">
+          <dt className="text-slate-400">Sample Rate</dt>
+          <dd className="text-slate-200 font-mono">{seg2Data.sampleRate.toFixed(0)} Hz</dd>
         </div>
 
         <div className="flex justify-between">
@@ -49,7 +54,7 @@ export function FileInfoPanel({ seg2Data, fileName, compact = false }: FileInfoP
       </dl>
 
       {Object.keys(header.freeFormatStrings).length > 0 && (
-        <details className="mt-2">
+        <details className="mt-1.5">
           <summary className="text-[10px] text-slate-500 cursor-pointer hover:text-slate-400">
             Metadata ({Object.keys(header.freeFormatStrings).length})
           </summary>

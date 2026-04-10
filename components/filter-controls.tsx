@@ -22,9 +22,9 @@ export function FilterControls({
   const maxHighpass = Math.min(100, nyquist * 0.5)
 
   return (
-    <div className="bg-slate-900 rounded-lg border border-slate-700 p-3">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-slate-200">Bandpass Filter</h3>
+    <div className="bg-slate-900 rounded-lg border border-slate-700 p-2">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-medium text-slate-200">Bandpass Filter</h3>
         <Switch
           checked={settings.enabled}
           onCheckedChange={(enabled) =>
@@ -34,8 +34,8 @@ export function FilterControls({
       </div>
 
       <div className={settings.enabled ? "opacity-100" : "opacity-40 pointer-events-none"}>
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-0.5">
             <Label className="text-xs text-slate-400">HPF (High-pass)</Label>
             <span className="text-xs font-mono text-blue-400">{settings.highpassHz} Hz</span>
           </div>
@@ -55,8 +55,8 @@ export function FilterControls({
           </div>
         </div>
 
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-0.5">
             <Label className="text-xs text-slate-400">LPF (Low-pass)</Label>
             <span className="text-xs font-mono text-blue-400">{settings.lowpassHz} Hz</span>
           </div>
@@ -77,7 +77,7 @@ export function FilterControls({
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-0.5">
             <Label className="text-xs text-slate-400">Filter Order</Label>
           </div>
           <Select
@@ -86,7 +86,7 @@ export function FilterControls({
               onSettingsChange({ ...settings, order: parseInt(value) })
             }
           >
-            <SelectTrigger className="h-8 text-xs bg-slate-800 border-slate-600">
+            <SelectTrigger className="h-7 text-xs bg-slate-800 border-slate-600">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

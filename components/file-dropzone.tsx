@@ -59,7 +59,7 @@ export function FileDropzone({ onFileLoad, compact = false }: FileDropzoneProps)
       className={`
         border-2 border-dashed rounded-lg text-center
         transition-colors cursor-pointer
-        ${compact ? "p-3" : "p-6"}
+        ${compact ? "p-2" : "p-6"}
         ${
           isDragging
             ? "border-blue-400 bg-blue-500/10"

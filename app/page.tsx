@@ -10,12 +10,23 @@ import { FilterControls } from "@/components/filter-controls"
 import { FileInfoPanel } from "@/components/file-info-panel"
 import { FileDropzone } from "@/components/file-dropzone"
 import { Button } from "@/components/ui/button"
-import { Waves, Grid3X3 } from "lucide-react"
+import { Waves, Grid3X3, X } from "lucide-react"
+
+interface FileEntry {
+  id: string
+  fileName: string
+  seg2Data: SEG2File
+  channelGroups: ChannelGroup[]
+}
+
+function getTabName(fileName: string, traceCount: number): string {
+  const baseName = fileName.replace(/\.[^.]+$/, "")
+  return `${baseName}-${traceCount}ch`
+}
 
 export default function SEG2Viewer() {
-  const [seg2Data, setSeg2Data] = useState<SEG2File | null>(null)
-  const [fileName, setFileName] = useState<string | null>(null)
-  const [channelGroups, setChannelGroups] = useState<ChannelGroup[]>([])
+  const [files, setFiles] = useState<FileEntry[]>([])
+  const [activeFileId, setActiveFileId] = useState<string | null>(null)
   const [gainMode, setGainMode] = useState<GainMode>("agc")
   const [fixedGain, setFixedGain] = useState(10)
   const [filterSettings, setFilterSettings] = useState<FilterSettings>({
@@ -39,71 +50,134 @@ export default function SEG2Viewer() {
     return () => window.removeEventListener("resize", updateSize)
   }, [])
 
-  const handleFileLoad = useCallback((buffer: ArrayBuffer, name: string) => {
-    try {
-      setError(null)
-      const data = parseSEG2(buffer)
-      
-      // Debug output
-      console.log("=== SEG2 Debug Info ===")
-      console.log("Sample Rate:", data.sampleRate)
-      console.log("Number of traces:", data.traces.length)
-      if (data.traces[0]) {
-        console.log("First trace free strings:", data.traces[0].freeFormatStrings)
-        console.log("First trace samples:", data.traces[0].data.length)
-        console.log("First trace format:", data.traces[0].dataFormatCode)
-      }
-      console.log("Header free strings:", data.header.freeFormatStrings)
-      console.log("=======================")
-      
-      setSeg2Data(data)
-      setFileName(name)
+  const activeFile = files.find((f) => f.id === activeFileId) ?? null
+  const seg2Data = activeFile?.seg2Data ?? null
+  const fileName = activeFile?.fileName ?? null
+  const channelGroups = activeFile?.channelGroups ?? []
 
-      const totalTraces = data.traces.length
-      const groupableTraces = totalTraces
+  const handleFileLoad = useCallback(
+    (buffer: ArrayBuffer, name: string) => {
+      try {
+        setError(null)
+        const data = parseSEG2(buffer)
 
-      // Keep channel groups if trace count matches, otherwise reset
-      const previousGroupableTraces = channelGroups.reduce((sum, g) => sum + g.channels.length, 0)
-      if (previousGroupableTraces !== groupableTraces || channelGroups.length === 0) {
-        const groups = createDefaultGroups(groupableTraces)
-        setChannelGroups(groups)
+        // Debug output
+        console.log("=== SEG2 Debug Info ===")
+        console.log("Sample Rate:", data.sampleRate)
+        console.log("Number of traces:", data.traces.length)
+        if (data.traces[0]) {
+          console.log("First trace free strings:", data.traces[0].freeFormatStrings)
+          console.log("First trace samples:", data.traces[0].data.length)
+          console.log("First trace format:", data.traces[0].dataFormatCode)
+        }
+        console.log("Header free strings:", data.header.freeFormatStrings)
+        console.log("=======================")
+
+        setFiles((prev) => {
+          const existingIndex = prev.findIndex((f) => f.fileName === name)
+          if (existingIndex >= 0) {
+            // Update existing entry, preserve groups if trace count unchanged
+            const existing = prev[existingIndex]
+            const prevTraceCount = existing.channelGroups.reduce((sum, g) => sum + g.channels.length, 0)
+            const newGroups =
+              prevTraceCount !== data.traces.length
+                ? createDefaultGroups(data.traces.length)
+                : existing.channelGroups
+            const updated = prev.map((f) =>
+              f.fileName === name ? { ...f, seg2Data: data, channelGroups: newGroups } : f
+            )
+            setActiveFileId(existing.id)
+            return updated
+          } else {
+            // Add new tab
+            const id = `${name}-${Date.now()}`
+            const groups = createDefaultGroups(data.traces.length)
+            setActiveFileId(id)
+            return [...prev, { id, fileName: name, seg2Data: data, channelGroups: groups }]
+          }
+        })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to parse SEG2 file")
       }
-      // Filter and gain settings are preserved (no reset here)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to parse SEG2 file")
-      setSeg2Data(null)
-      setFileName(null)
-    }
-  }, [channelGroups])
+    },
+    []
+  )
+
+  const handleCloseTab = useCallback(
+    (id: string) => {
+      setFiles((prev) => {
+        const newFiles = prev.filter((f) => f.id !== id)
+        if (activeFileId === id) {
+          setActiveFileId(newFiles.length > 0 ? newFiles[newFiles.length - 1].id : null)
+        }
+        return newFiles
+      })
+    },
+    [activeFileId]
+  )
+
+  const handleChannelGroupsChange = useCallback(
+    (groups: ChannelGroup[]) => {
+      if (!activeFileId) return
+      setFiles((prev) => prev.map((f) => (f.id === activeFileId ? { ...f, channelGroups: groups } : f)))
+    },
+    [activeFileId]
+  )
 
   const visibleChannelCount = useMemo(() => {
-    return channelGroups
-      .filter((g) => g.visible)
-      .reduce((sum, g) => sum + g.channels.length, 0)
+    return channelGroups.filter((g) => g.visible).reduce((sum, g) => sum + g.channels.length, 0)
   }, [channelGroups])
 
   const sampleRate = seg2Data?.sampleRate || 1000
 
   return (
     <div className="h-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden">
-      {/* Minimal Header */}
-      <header className="flex-none border-b border-slate-800 px-3 py-1 flex items-center justify-between h-7">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xs font-semibold text-slate-100">SEG2</h1>
-          {fileName && (
-            <span className="text-[10px] text-slate-400 truncate max-w-40">{fileName}</span>
-          )}
+      {/* Header with Chrome-style file tabs */}
+      <header className="flex-none border-b border-slate-800 px-2 flex items-end h-8 gap-0">
+        <span className="text-xs font-semibold text-slate-100 px-2 pb-1 flex-none">SEG2</span>
+
+        {/* Tabs */}
+        <div className="flex-1 flex items-end gap-0.5 overflow-x-auto min-w-0 h-full pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {files.map((file) => {
+            const tabName = getTabName(file.fileName, file.seg2Data.traces.length)
+            const isActive = file.id === activeFileId
+            return (
+              <div
+                key={file.id}
+                className={`flex items-center gap-1 px-2 h-6 rounded-t text-[10px] cursor-pointer flex-none select-none transition-colors ${
+                  isActive
+                    ? "bg-slate-800 text-slate-100 border border-b-0 border-slate-600"
+                    : "bg-slate-900 text-slate-400 hover:text-slate-300 border border-transparent hover:border-slate-700"
+                }`}
+                onClick={() => setActiveFileId(file.id)}
+              >
+                <span className="truncate max-w-[120px]">{tabName}</span>
+                <button
+                  className="rounded hover:bg-slate-600 p-0.5 text-slate-500 hover:text-slate-200"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleCloseTab(file.id)
+                  }}
+                  aria-label="Close tab"
+                >
+                  <X size={8} />
+                </button>
+              </div>
+            )
+          })}
         </div>
+
+        {/* visible ch count shown when a file is active */}
         {seg2Data && (
-          <div className="text-[10px] text-slate-400">
-            {visibleChannelCount}/{seg2Data.traces.length}ch | {sampleRate.toFixed(0)}Hz
-          </div>
+          <span className="text-[10px] text-slate-500 pb-1 px-2 flex-none">
+            {visibleChannelCount}/{seg2Data.traces.length}ch
+          </span>
         )}
       </header>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <aside className="w-56 flex-none border-r border-slate-800 p-2 flex flex-col gap-2 overflow-y-auto">
+        <aside className="w-56 flex-none border-r border-slate-800 p-2 flex flex-col gap-1.5 overflow-y-auto">
           <FileDropzone onFileLoad={handleFileLoad} compact />
 
           {/* Display Mode Toggle */}
@@ -111,7 +185,7 @@ export default function SEG2Viewer() {
             <Button
               variant={displayMode === "waveform" ? "default" : "outline"}
               size="sm"
-              className={`flex-1 h-7 text-[10px] gap-1 ${displayMode === "waveform" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
+              className={`flex-1 h-6 text-[10px] gap-1 ${displayMode === "waveform" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
               onClick={() => setDisplayMode("waveform")}
             >
               <Waves size={12} />
@@ -120,7 +194,7 @@ export default function SEG2Viewer() {
             <Button
               variant={displayMode === "intensity" ? "default" : "outline"}
               size="sm"
-              className={`flex-1 h-7 text-[10px] gap-1 ${displayMode === "intensity" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
+              className={`flex-1 h-6 text-[10px] gap-1 ${displayMode === "intensity" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
               onClick={() => setDisplayMode("intensity")}
             >
               <Grid3X3 size={12} />
@@ -129,7 +203,7 @@ export default function SEG2Viewer() {
           </div>
 
           {error && (
-            <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">
+            <div className="p-1.5 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">
               {error}
             </div>
           )}
@@ -148,10 +222,7 @@ export default function SEG2Viewer() {
           />
 
           {channelGroups.length > 0 && (
-            <ChannelGroupPanel
-              groups={channelGroups}
-              onGroupsChange={setChannelGroups}
-            />
+            <ChannelGroupPanel groups={channelGroups} onGroupsChange={handleChannelGroupsChange} />
           )}
 
           <FileInfoPanel seg2Data={seg2Data} fileName={fileName} compact />

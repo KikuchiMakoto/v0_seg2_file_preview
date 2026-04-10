@@ -54,15 +54,21 @@ export default function SEG2Viewer() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName
+      const target = e.target as HTMLElement
+      const tag = target.tagName
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return
-      if (e.key !== "a" && e.key !== "d") return
+      const isArrow = e.key === "ArrowLeft" || e.key === "ArrowRight"
+      const isAD = e.key === "a" || e.key === "d"
+      if (!isAD && !isArrow) return
+      // Arrow keys must not interfere with sliders
+      if (isArrow && target.getAttribute("role") === "slider") return
+      const goNext = e.key === "d" || e.key === "ArrowRight"
       setFiles((prev) => {
         if (prev.length === 0) return prev
         setActiveFileId((currentId) => {
           const idx = prev.findIndex((f) => f.id === currentId)
           if (idx < 0) return currentId
-          const next = e.key === "d" ? Math.min(idx + 1, prev.length - 1) : Math.max(idx - 1, 0)
+          const next = goNext ? Math.min(idx + 1, prev.length - 1) : Math.max(idx - 1, 0)
           return prev[next].id
         })
         return prev
@@ -234,8 +240,9 @@ export default function SEG2Viewer() {
 
         {/* visible ch count shown when a file is active */}
         {seg2Data && (
-          <span className="text-[10px] text-slate-500 pb-1 px-2 flex-none">
+          <span className="text-[10px] text-slate-500 pb-1 px-2 flex-none leading-none text-right">
             {visibleChannelCount}/{seg2Data.traces.length}ch
+            <span className="block text-[8px] text-slate-600">← →/A D: tab</span>
           </span>
         )}
       </header>
@@ -243,48 +250,51 @@ export default function SEG2Viewer() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside className="w-56 flex-none border-r border-slate-800 p-2 flex flex-col gap-1.5 overflow-y-auto">
-          <FileDropzone onFileLoad={handleFileLoad} />
+          {/* Upper controls – flex-none keeps them stable regardless of ChannelGroupPanel height */}
+          <div className="flex-none flex flex-col gap-1.5">
+            <FileDropzone onFileLoad={handleFileLoad} />
 
-          {/* Display Mode Toggle */}
-          <div className="flex gap-1">
-            <Button
-              variant={displayMode === "waveform" ? "default" : "outline"}
-              size="sm"
-              className={`flex-1 h-6 text-[10px] gap-1 ${displayMode === "waveform" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
-              onClick={() => setDisplayMode("waveform")}
-            >
-              <Waves size={12} />
-              Waveform
-            </Button>
-            <Button
-              variant={displayMode === "intensity" ? "default" : "outline"}
-              size="sm"
-              className={`flex-1 h-6 text-[10px] gap-1 ${displayMode === "intensity" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
-              onClick={() => setDisplayMode("intensity")}
-            >
-              <Grid3X3 size={12} />
-              Intensity
-            </Button>
-          </div>
-
-          {error && (
-            <div className="p-1.5 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">
-              {error}
+            {/* Display Mode Toggle */}
+            <div className="flex gap-1">
+              <Button
+                variant={displayMode === "waveform" ? "default" : "outline"}
+                size="sm"
+                className={`flex-1 h-6 text-[10px] gap-1 ${displayMode === "waveform" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
+                onClick={() => setDisplayMode("waveform")}
+              >
+                <Waves size={12} />
+                Waveform
+              </Button>
+              <Button
+                variant={displayMode === "intensity" ? "default" : "outline"}
+                size="sm"
+                className={`flex-1 h-6 text-[10px] gap-1 ${displayMode === "intensity" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
+                onClick={() => setDisplayMode("intensity")}
+              >
+                <Grid3X3 size={12} />
+                Intensity
+              </Button>
             </div>
-          )}
 
-          <FilterControls
-            settings={filterSettings}
-            onSettingsChange={setFilterSettings}
-            sampleRate={sampleRate}
-          />
+            {error && (
+              <div className="p-1.5 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">
+                {error}
+              </div>
+            )}
 
-          <GainControls
-            gainMode={gainMode}
-            onGainModeChange={setGainMode}
-            fixedGain={fixedGain}
-            onFixedGainChange={setFixedGain}
-          />
+            <FilterControls
+              settings={filterSettings}
+              onSettingsChange={setFilterSettings}
+              sampleRate={sampleRate}
+            />
+
+            <GainControls
+              gainMode={gainMode}
+              onGainModeChange={setGainMode}
+              fixedGain={fixedGain}
+              onFixedGainChange={setFixedGain}
+            />
+          </div>
 
           {channelGroups.length > 0 && (
             <ChannelGroupPanel groups={channelGroups} onGroupsChange={handleChannelGroupsChange} />

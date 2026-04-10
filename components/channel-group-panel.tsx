@@ -67,7 +67,7 @@ function SortableGroupItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-1.5 p-1.5 rounded border transition-colors ${
+      className={`flex items-center gap-1 p-1 rounded border transition-colors ${
         isDragging
           ? "bg-slate-700 border-slate-500 shadow-lg z-10"
           : "bg-slate-800 border-slate-700 hover:border-slate-600"
@@ -167,7 +167,7 @@ export function ChannelGroupPanel({ groups, onGroupsChange }: ChannelGroupPanelP
 
   return (
     <div className="bg-slate-900 rounded-lg border border-slate-700 p-2">
-      <div className="flex items-center justify-between mb-1.5">
+      <div className="flex items-center justify-between mb-1">
         <h3 className="text-xs font-medium text-slate-200">Channel Groups</h3>
         <span className="text-[10px] text-slate-400">
           {visibleCount}g / {totalChannels}ch
@@ -180,7 +180,7 @@ export function ChannelGroupPanel({ groups, onGroupsChange }: ChannelGroupPanelP
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={groupIds} strategy={verticalListSortingStrategy}>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-0.5">
             {groups.map((group, index) => (
               <SortableGroupItem
                 key={group.id}
@@ -194,7 +194,7 @@ export function ChannelGroupPanel({ groups, onGroupsChange }: ChannelGroupPanelP
         </SortableContext>
       </DndContext>
 
-      <div className="mt-1.5 pt-1.5 border-t border-slate-700 flex gap-1">
+      <div className="mt-1 pt-1 border-t border-slate-700 flex gap-1">
         <Button
           variant="outline"
           size="sm"

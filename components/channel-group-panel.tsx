@@ -67,7 +67,7 @@ function SortableGroupItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-1 p-1 rounded border transition-colors ${
+      className={`flex items-center gap-0.5 py-0.5 px-1 rounded border transition-colors ${
         isDragging
           ? "bg-slate-700 border-slate-500 shadow-lg z-10"
           : "bg-slate-800 border-slate-700 hover:border-slate-600"
@@ -95,21 +95,21 @@ function SortableGroupItem({
       <Button
         variant="ghost"
         size="sm"
-        className="h-5 w-5 p-0 text-slate-400 hover:text-slate-200 hover:bg-slate-700"
+        className="h-4 w-4 p-0 text-slate-400 hover:text-slate-200 hover:bg-slate-700"
         onClick={() => onToggleReversed(group.id)}
         title={group.reversed ? "Normal order" : "Reverse order"}
       >
-        <ArrowUpDown size={10} />
+        <ArrowUpDown size={9} />
       </Button>
 
       <Button
         variant="ghost"
         size="sm"
-        className="h-5 w-5 p-0 text-slate-400 hover:text-slate-200 hover:bg-slate-700"
+        className="h-4 w-4 p-0 text-slate-400 hover:text-slate-200 hover:bg-slate-700"
         onClick={() => onToggleVisibility(group.id)}
         title={group.visible ? "Hide group" : "Show group"}
       >
-        {group.visible ? <Eye size={10} /> : <EyeOff size={10} />}
+        {group.visible ? <Eye size={9} /> : <EyeOff size={9} />}
       </Button>
     </div>
   )

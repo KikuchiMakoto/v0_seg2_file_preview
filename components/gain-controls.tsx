@@ -10,6 +10,8 @@ interface GainControlsProps {
   onGainModeChange: (mode: GainMode) => void
   fixedGain: number
   onFixedGainChange: (gain: number) => void
+  agcFixedGain: number
+  onAgcFixedGainChange: (gain: number) => void
 }
 
 export function GainControls({
@@ -17,6 +19,8 @@ export function GainControls({
   onGainModeChange,
   fixedGain,
   onFixedGainChange,
+  agcFixedGain,
+  onAgcFixedGainChange,
 }: GainControlsProps) {
   return (
     <div className="bg-slate-900 rounded-lg border border-slate-700 p-2">
@@ -70,25 +74,48 @@ export function GainControls({
         </div>
       </RadioGroup>
 
-      {(gainMode === "fixed" || gainMode === "agc-fixed") && (
+      {gainMode === "agc-fixed" && (
         <div className="mt-2 pt-1.5 border-t border-slate-700">
           <div className="flex items-center justify-between mb-0.5">
             <Label className="text-xs text-slate-400">Multiplier</Label>
             <span className="text-xs font-mono text-blue-400">
-              x{fixedGain.toFixed(1)}
+              x{agcFixedGain}
             </span>
           </div>
           <Slider
-            value={[fixedGain]}
-            onValueChange={([value]) => onFixedGainChange(value)}
+            value={[agcFixedGain]}
+            onValueChange={([value]) => onAgcFixedGainChange(value)}
             min={1}
             max={100}
             step={1}
             className="w-full"
           />
           <div className="flex justify-between mt-0.5">
-            <span className="text-[10px] text-slate-500">1x</span>
-            <span className="text-[10px] text-slate-500">100x</span>
+            <span className="text-[10px] text-slate-500">x1</span>
+            <span className="text-[10px] text-slate-500">x100</span>
+          </div>
+        </div>
+      )}
+
+      {gainMode === "fixed" && (
+        <div className="mt-2 pt-1.5 border-t border-slate-700">
+          <div className="flex items-center justify-between mb-0.5">
+            <Label className="text-xs text-slate-400">Multiplier</Label>
+            <span className="text-xs font-mono text-blue-400">
+              x{(fixedGain / 1000).toFixed(0)}k
+            </span>
+          </div>
+          <Slider
+            value={[fixedGain]}
+            onValueChange={([value]) => onFixedGainChange(value)}
+            min={1000}
+            max={100000}
+            step={1000}
+            className="w-full"
+          />
+          <div className="flex justify-between mt-0.5">
+            <span className="text-[10px] text-slate-500">x1k</span>
+            <span className="text-[10px] text-slate-500">x100k</span>
           </div>
         </div>
       )}

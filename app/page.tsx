@@ -52,6 +52,26 @@ export default function SEG2Viewer() {
     return () => window.removeEventListener("resize", updateSize)
   }, [])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return
+      if (e.key !== "a" && e.key !== "d") return
+      setFiles((prev) => {
+        if (prev.length === 0) return prev
+        setActiveFileId((currentId) => {
+          const idx = prev.findIndex((f) => f.id === currentId)
+          if (idx < 0) return currentId
+          const next = e.key === "d" ? Math.min(idx + 1, prev.length - 1) : Math.max(idx - 1, 0)
+          return prev[next].id
+        })
+        return prev
+      })
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
   const activeFile = files.find((f) => f.id === activeFileId) ?? null
   const seg2Data = activeFile?.seg2Data ?? null
   const fileName = activeFile?.fileName ?? null

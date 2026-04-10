@@ -30,7 +30,7 @@ export function FileDropzone({ onFileLoad }: FileDropzoneProps) {
       <input
         ref={inputRef}
         type="file"
-        accept=".seg2,.sg2,.dat"
+        accept=".seg2,.sg2,.dat,.ydt"
         multiple
         onChange={handleFileInput}
         className="hidden"
@@ -41,7 +41,7 @@ export function FileDropzone({ onFileLoad }: FileDropzoneProps) {
         className="cursor-pointer flex items-center justify-center gap-1.5 w-full h-7 rounded bg-blue-600 hover:bg-blue-700 transition-colors text-xs font-medium text-white select-none"
       >
         <Upload size={13} />
-        Upload SEG2 File
+        Upload File
       </label>
     </>
   )

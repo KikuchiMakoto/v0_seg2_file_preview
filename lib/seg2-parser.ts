@@ -225,7 +225,7 @@ export class SEG2Parser {
       index: i,
       samples: t.data.length,
       formatCode: t.dataFormatCode,
-      dataOffset: this.debug[`trace${i}_offset`] + (t as unknown as { sizeOfBlock: number }).sizeOfBlock,
+      dataOffset: tracePointers[i] + t.sizeOfBlock,
     }))
 
     // Extract sample rate from first trace - Python uses 1.0/interval

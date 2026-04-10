@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react"
 import { parseSEG2, type SEG2File, type GainMode, type FilterSettings } from "@/lib/seg2-parser"
+import { parseYDT, isYDTFile } from "@/lib/ydt-parser"
 import { createDefaultGroups, type ChannelGroup } from "@/lib/channel-types"
 import { WaveformCanvas, type DisplayMode } from "@/components/waveform-canvas"
 import { ChannelGroupPanel } from "@/components/channel-group-panel"
@@ -88,10 +89,16 @@ export default function SEG2Viewer() {
     (buffer: ArrayBuffer, name: string) => {
       try {
         setError(null)
-        const data = parseSEG2(buffer)
+        const ext = name.split(".").pop()?.toLowerCase()
+        let data: SEG2File
+        if (ext === "ydt" || isYDTFile(buffer)) {
+          data = parseYDT(buffer)
+        } else {
+          data = parseSEG2(buffer)
+        }
 
         // Debug output
-        console.log("=== SEG2 Debug Info ===")
+        console.log("=== File Debug Info ===")
         console.log("Sample Rate:", data.sampleRate)
         console.log("Number of traces:", data.traces.length)
         if (data.traces[0]) {
@@ -126,7 +133,7 @@ export default function SEG2Viewer() {
           }
         })
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to parse SEG2 file")
+        setError(err instanceof Error ? err.message : "Failed to parse file")
       }
     },
     []
@@ -197,7 +204,7 @@ export default function SEG2Viewer() {
       {isDragOver && (
         <div className="fixed inset-0 z-50 bg-slate-950/85 border-4 border-blue-400 border-dashed flex flex-col items-center justify-center gap-4 pointer-events-none">
           <Upload size={64} className="text-blue-400" />
-          <span className="text-blue-300 text-2xl font-semibold tracking-wide">Drop SEG2 Files</span>
+          <span className="text-blue-300 text-2xl font-semibold tracking-wide">Drop SEG2 / YDT Files</span>
         </div>
       )}
       {/* Header with Chrome-style file tabs */}

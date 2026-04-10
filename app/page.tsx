@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { parseSEG2, type SEG2File, type GainMode, type FilterSettings } from "@/lib/seg2-parser"
 import { createDefaultGroups, type ChannelGroup } from "@/lib/channel-types"
 import { WaveformCanvas, type DisplayMode } from "@/components/waveform-canvas"
@@ -28,7 +28,8 @@ export default function SEG2Viewer() {
   const [files, setFiles] = useState<FileEntry[]>([])
   const [activeFileId, setActiveFileId] = useState<string | null>(null)
   const [gainMode, setGainMode] = useState<GainMode>("agc")
-  const [fixedGain, setFixedGain] = useState(10)
+  const [fixedGain, setFixedGain] = useState(1000)
+  const [agcFixedGain, setAgcFixedGain] = useState(1)
   const [filterSettings, setFilterSettings] = useState<FilterSettings>({
     enabled: true,
     highpassHz: 5,
@@ -182,10 +183,6 @@ export default function SEG2Viewer() {
     [handleFileLoad]
   )
 
-  const visibleChannelCount = useMemo(() => {
-    return channelGroups.filter((g) => g.visible).reduce((sum, g) => sum + g.channels.length, 0)
-  }, [channelGroups])
-
   const sampleRate = seg2Data?.sampleRate || 1000
 
   return (
@@ -238,13 +235,10 @@ export default function SEG2Viewer() {
           })}
         </div>
 
-        {/* visible ch count shown when a file is active */}
-        {seg2Data && (
-          <span className="text-[10px] text-slate-500 pb-1 px-2 flex-none leading-none text-right">
-            {visibleChannelCount}/{seg2Data.traces.length}ch
-            <span className="block text-[8px] text-slate-600">← →/A D: tab</span>
-          </span>
-        )}
+        {/* Keyboard navigation hint */}
+        <span className="text-[10px] text-slate-400 pb-1 px-2 flex-none leading-none font-medium tracking-wide whitespace-nowrap">
+          ← → / A D : tab
+        </span>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
@@ -293,6 +287,8 @@ export default function SEG2Viewer() {
               onGainModeChange={setGainMode}
               fixedGain={fixedGain}
               onFixedGainChange={setFixedGain}
+              agcFixedGain={agcFixedGain}
+              onAgcFixedGainChange={setAgcFixedGain}
             />
           </div>
 
@@ -309,7 +305,7 @@ export default function SEG2Viewer() {
             seg2Data={seg2Data}
             channelGroups={channelGroups}
             gainMode={gainMode}
-            fixedGain={fixedGain}
+            fixedGain={gainMode === "agc-fixed" ? agcFixedGain : fixedGain}
             filterSettings={filterSettings}
             displayMode={displayMode}
             width={canvasSize.width}

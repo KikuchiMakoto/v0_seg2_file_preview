@@ -4,8 +4,8 @@ import './globals.css'
 const basePath = process.env.NODE_ENV === 'production' ? '/v0_seg2_file_preview' : '';
 
 export const metadata: Metadata = {
-  title: 'SEG2 Waveform Viewer',
-  description: 'Surface wave survey SEG2 file viewer with ObsPy-style waveform display',
+  title: 'SEG2/YDT Waveform Viewer',
+  description: 'MASW(SEG2) and Keyence(YDT) file viewer with ObsPy-style waveform display',
   icons: {
     icon: [
       {

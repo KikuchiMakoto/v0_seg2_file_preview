@@ -204,12 +204,12 @@ export default function SEG2Viewer() {
       {isDragOver && (
         <div className="fixed inset-0 z-50 bg-slate-950/85 border-4 border-blue-400 border-dashed flex flex-col items-center justify-center gap-4 pointer-events-none">
           <Upload size={64} className="text-blue-400" />
-          <span className="text-blue-300 text-2xl font-semibold tracking-wide">Drop SEG2 / YDT Files</span>
+          <span className="text-blue-300 text-2xl font-semibold tracking-wide">Drop SEG2/YDT Files</span>
         </div>
       )}
       {/* Header with Chrome-style file tabs */}
       <header className="flex-none border-b border-slate-800 px-2 flex items-end h-8 gap-0">
-        <span className="text-xs font-semibold text-slate-100 px-2 pb-1 flex-none">SEG2</span>
+        <span className="text-xs font-semibold text-slate-100 px-2 pb-1 flex-none">SEG2/YDT</span>
 
         {/* Tabs */}
         <div className="flex-1 flex items-end gap-0.5 overflow-x-auto min-w-0 h-full pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

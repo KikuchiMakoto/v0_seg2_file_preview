@@ -1,88 +1,48 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useRef } from "react"
 import { Upload } from "lucide-react"
 
 interface FileDropzoneProps {
   onFileLoad: (buffer: ArrayBuffer, fileName: string) => void
-  compact?: boolean
 }
 
-export function FileDropzone({ onFileLoad, compact = false }: FileDropzoneProps) {
-  const [isDragging, setIsDragging] = useState(false)
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-  }, [])
-
-  const handleDrop = useCallback(
-    async (e: React.DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragging(false)
-
-      const files = e.dataTransfer.files
-      if (files.length > 0) {
-        const file = files[0]
-        const buffer = await file.arrayBuffer()
-        onFileLoad(buffer, file.name)
-      }
-    },
-    [onFileLoad]
-  )
+export function FileDropzone({ onFileLoad }: FileDropzoneProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFileInput = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files
       if (files && files.length > 0) {
-        const file = files[0]
-        const buffer = await file.arrayBuffer()
-        onFileLoad(buffer, file.name)
+        for (const file of Array.from(files)) {
+          const buffer = await file.arrayBuffer()
+          onFileLoad(buffer, file.name)
+        }
       }
+      // reset so the same file can be re-selected
+      if (inputRef.current) inputRef.current.value = ""
     },
     [onFileLoad]
   )
 
   return (
-    <div
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      className={`
-        border-2 border-dashed rounded-lg text-center
-        transition-colors cursor-pointer
-        ${compact ? "p-2" : "p-6"}
-        ${
-          isDragging
-            ? "border-blue-400 bg-blue-500/10"
-            : "border-slate-600 hover:border-slate-500 bg-slate-800/50"
-        }
-      `}
-    >
+    <>
       <input
+        ref={inputRef}
         type="file"
         accept=".seg2,.sg2,.dat"
+        multiple
         onChange={handleFileInput}
         className="hidden"
         id="file-input"
       />
-      <label htmlFor="file-input" className="cursor-pointer flex items-center justify-center gap-2">
-        <Upload
-          className={`${isDragging ? "text-blue-400" : "text-slate-400"}`}
-          size={compact ? 16 : 24}
-        />
-        <span className={`${compact ? "text-xs" : "text-sm"} text-slate-300`}>
-          {compact ? "Drop SEG2 or click" : "Drop SEG2 file here or click to browse"}
-        </span>
+      <label
+        htmlFor="file-input"
+        className="cursor-pointer flex items-center justify-center gap-1.5 w-full h-7 rounded bg-blue-600 hover:bg-blue-700 transition-colors text-xs font-medium text-white select-none"
+      >
+        <Upload size={13} />
+        Upload SEG2 File
       </label>
-    </div>
+    </>
   )
 }

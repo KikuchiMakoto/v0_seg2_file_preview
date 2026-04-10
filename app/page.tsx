@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo, useEffect } from "react"
+import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { parseSEG2, type SEG2File, type GainMode, type FilterSettings } from "@/lib/seg2-parser"
 import { createDefaultGroups, type ChannelGroup } from "@/lib/channel-types"
 import { WaveformCanvas, type DisplayMode } from "@/components/waveform-canvas"
@@ -10,7 +10,7 @@ import { FilterControls } from "@/components/filter-controls"
 import { FileInfoPanel } from "@/components/file-info-panel"
 import { FileDropzone } from "@/components/file-dropzone"
 import { Button } from "@/components/ui/button"
-import { Waves, Grid3X3, X } from "lucide-react"
+import { Waves, Grid3X3, X, Upload } from "lucide-react"
 
 interface FileEntry {
   id: string
@@ -38,6 +38,8 @@ export default function SEG2Viewer() {
   const [error, setError] = useState<string | null>(null)
   const [canvasSize, setCanvasSize] = useState({ width: 900, height: 700 })
   const [displayMode, setDisplayMode] = useState<DisplayMode>("waveform")
+  const [isDragOver, setIsDragOver] = useState(false)
+  const dragCounterRef = useRef(0)
 
   useEffect(() => {
     const updateSize = () => {
@@ -124,6 +126,36 @@ export default function SEG2Viewer() {
     [activeFileId]
   )
 
+  const handlePageDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current++
+    if (dragCounterRef.current === 1) setIsDragOver(true)
+  }, [])
+
+  const handlePageDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+  }, [])
+
+  const handlePageDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current--
+    if (dragCounterRef.current === 0) setIsDragOver(false)
+  }, [])
+
+  const handlePageDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault()
+      dragCounterRef.current = 0
+      setIsDragOver(false)
+      const files = Array.from(e.dataTransfer.files)
+      for (const file of files) {
+        const buffer = await file.arrayBuffer()
+        handleFileLoad(buffer, file.name)
+      }
+    },
+    [handleFileLoad]
+  )
+
   const visibleChannelCount = useMemo(() => {
     return channelGroups.filter((g) => g.visible).reduce((sum, g) => sum + g.channels.length, 0)
   }, [channelGroups])
@@ -131,7 +163,20 @@ export default function SEG2Viewer() {
   const sampleRate = seg2Data?.sampleRate || 1000
 
   return (
-    <div className="h-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden">
+    <div
+      className="h-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden relative"
+      onDragEnter={handlePageDragEnter}
+      onDragOver={handlePageDragOver}
+      onDragLeave={handlePageDragLeave}
+      onDrop={handlePageDrop}
+    >
+      {/* Full-page drag overlay */}
+      {isDragOver && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 border-4 border-blue-400 border-dashed flex flex-col items-center justify-center gap-4 pointer-events-none">
+          <Upload size={64} className="text-blue-400" />
+          <span className="text-blue-300 text-2xl font-semibold tracking-wide">Drop SEG2 Files</span>
+        </div>
+      )}
       {/* Header with Chrome-style file tabs */}
       <header className="flex-none border-b border-slate-800 px-2 flex items-end h-8 gap-0">
         <span className="text-xs font-semibold text-slate-100 px-2 pb-1 flex-none">SEG2</span>
@@ -178,7 +223,7 @@ export default function SEG2Viewer() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside className="w-56 flex-none border-r border-slate-800 p-2 flex flex-col gap-1.5 overflow-y-auto">
-          <FileDropzone onFileLoad={handleFileLoad} compact />
+          <FileDropzone onFileLoad={handleFileLoad} />
 
           {/* Display Mode Toggle */}
           <div className="flex gap-1">

@@ -166,8 +166,8 @@ export function ChannelGroupPanel({ groups, onGroupsChange }: ChannelGroupPanelP
     .reduce((sum, g) => sum + g.channels.length, 0)
 
   return (
-    <div className="bg-slate-900 rounded-lg border border-slate-700 p-3">
-      <div className="flex items-center justify-between mb-2">
+    <div className="bg-slate-900 rounded-lg border border-slate-700 p-2">
+      <div className="flex items-center justify-between mb-1.5">
         <h3 className="text-xs font-medium text-slate-200">Channel Groups</h3>
         <span className="text-[10px] text-slate-400">
           {visibleCount}g / {totalChannels}ch
@@ -180,7 +180,7 @@ export function ChannelGroupPanel({ groups, onGroupsChange }: ChannelGroupPanelP
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={groupIds} strategy={verticalListSortingStrategy}>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             {groups.map((group, index) => (
               <SortableGroupItem
                 key={group.id}
@@ -194,7 +194,7 @@ export function ChannelGroupPanel({ groups, onGroupsChange }: ChannelGroupPanelP
         </SortableContext>
       </DndContext>
 
-      <div className="mt-2 pt-2 border-t border-slate-700 flex gap-1">
+      <div className="mt-1.5 pt-1.5 border-t border-slate-700 flex gap-1">
         <Button
           variant="outline"
           size="sm"

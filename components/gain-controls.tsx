@@ -19,13 +19,13 @@ export function GainControls({
   onFixedGainChange,
 }: GainControlsProps) {
   return (
-    <div className="bg-slate-900 rounded-lg border border-slate-700 p-3">
-      <h3 className="text-xs font-medium text-slate-200 mb-2">Gain Control</h3>
+    <div className="bg-slate-900 rounded-lg border border-slate-700 p-2">
+      <h3 className="text-xs font-medium text-slate-200 mb-1.5">Gain Control</h3>
 
       <RadioGroup
         value={gainMode}
         onValueChange={(value) => onGainModeChange(value as GainMode)}
-        className="flex flex-col gap-2"
+        className="flex flex-col gap-1"
       >
         <div className="flex items-center gap-2">
           <RadioGroupItem
@@ -71,8 +71,8 @@ export function GainControls({
       </RadioGroup>
 
       {(gainMode === "fixed" || gainMode === "agc-fixed") && (
-        <div className="mt-3 pt-2 border-t border-slate-700">
-          <div className="flex items-center justify-between mb-1">
+        <div className="mt-2 pt-1.5 border-t border-slate-700">
+          <div className="flex items-center justify-between mb-0.5">
             <Label className="text-xs text-slate-400">Multiplier</Label>
             <span className="text-xs font-mono text-blue-400">
               x{fixedGain.toFixed(1)}

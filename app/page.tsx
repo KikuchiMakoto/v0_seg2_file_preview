@@ -278,7 +278,7 @@ export default function SEG2Viewer() {
                <Button
                  variant={displayMode === "fk-spectrum" ? "default" : "outline"}
                  size="sm"
-                 className={`flex-1 h-6 text-[10px] ${displayMode === "fk-spectrum" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
+                 className={`flex-1 h-6 text-[10px] gap-1 ${displayMode === "fk-spectrum" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
                  onClick={() => setDisplayMode("fk-spectrum")}
                >
                  F-K

@@ -35,17 +35,29 @@ interface ComplexValue {
   im: number
 }
 
+const FK_MAX_CHANNELS = 96
+const FK_MIN_SAMPLES = 16
+const FK_MAX_SAMPLES = 128
+
 function dftRealPositive(signal: Float32Array, bins: number): ComplexValue[] {
   const n = signal.length
   const out: ComplexValue[] = new Array(bins)
   for (let k = 0; k < bins; k++) {
+    const angleStep = (-2 * Math.PI * k) / n
+    const cosStep = Math.cos(angleStep)
+    const sinStep = Math.sin(angleStep)
+    let c = 1
+    let s = 0
     let re = 0
     let im = 0
     for (let i = 0; i < n; i++) {
-      const angle = (-2 * Math.PI * k * i) / n
-      const s = signal[i]
-      re += s * Math.cos(angle)
-      im += s * Math.sin(angle)
+      const value = signal[i]
+      re += value * c
+      im += value * s
+      const nextC = c * cosStep - s * sinStep
+      const nextS = c * sinStep + s * cosStep
+      c = nextC
+      s = nextS
     }
     out[k] = { re, im }
   }
@@ -56,15 +68,21 @@ function dftComplex(input: ComplexValue[]): ComplexValue[] {
   const n = input.length
   const out: ComplexValue[] = new Array(n)
   for (let k = 0; k < n; k++) {
+    const angleStep = (-2 * Math.PI * k) / n
+    const cosStep = Math.cos(angleStep)
+    const sinStep = Math.sin(angleStep)
+    let c = 1
+    let s = 0
     let re = 0
     let im = 0
     for (let i = 0; i < n; i++) {
-      const angle = (-2 * Math.PI * k * i) / n
-      const c = Math.cos(angle)
-      const s = Math.sin(angle)
       const v = input[i]
       re += v.re * c - v.im * s
       im += v.re * s + v.im * c
+      const nextC = c * cosStep - s * sinStep
+      const nextS = c * sinStep + s * cosStep
+      c = nextC
+      s = nextS
     }
     out[k] = { re, im }
   }
@@ -74,9 +92,10 @@ function dftComplex(input: ComplexValue[]): ComplexValue[] {
 function sampleToLength(data: Float32Array, start: number, end: number, targetLength: number): Float32Array {
   const out = new Float32Array(targetLength)
   const span = Math.max(1, end - start)
+  const spanMinusOne = span - 1
   for (let i = 0; i < targetLength; i++) {
     const frac = targetLength === 1 ? 0 : i / (targetLength - 1)
-    const srcIdx = Math.min(end - 1, Math.max(start, Math.floor(start + frac * (span - 1))))
+    const srcIdx = Math.min(end - 1, Math.max(start, Math.floor(start + frac * spanMinusOne)))
     out[i] = data[srcIdx]
   }
   return out
@@ -485,9 +504,12 @@ export function WaveformCanvas({
 
       const channelCount = visibleByChannel.length
       if (channelCount > 1) {
-        const targetChannels = Math.min(96, channelCount)
-        const minVisibleSamples = visibleByChannel.reduce((m, d) => Math.min(m, d.length), Number.MAX_SAFE_INTEGER)
-        const targetSamples = Math.max(16, Math.min(128, minVisibleSamples))
+        const targetChannels = Math.min(FK_MAX_CHANNELS, channelCount)
+        const minVisibleSamples = visibleByChannel.reduce(
+          (minLength, traceData) => Math.min(minLength, traceData.length),
+          Number.MAX_SAFE_INTEGER
+        )
+        const targetSamples = Math.max(FK_MIN_SAMPLES, Math.min(FK_MAX_SAMPLES, minVisibleSamples))
 
         const channelStep = (channelCount - 1) / Math.max(1, targetChannels - 1)
         const reducedTraces: Float32Array[] = []

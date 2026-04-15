@@ -5,7 +5,7 @@ import type { SEG2File } from "@/lib/seg2-parser"
 import { processTraceData, applyBandpassFilter, type GainMode, type FilterSettings } from "@/lib/seg2-parser"
 import { getOrderedChannels, type ChannelGroup } from "@/lib/channel-types"
 
-export type DisplayMode = "waveform" | "intensity"
+export type DisplayMode = "waveform" | "intensity" | "fk-spectrum"
 
 interface WaveformCanvasProps {
   seg2Data: SEG2File | null
@@ -29,6 +29,76 @@ const GROUP_COLORS = [
   { fill: "rgba(6, 182, 212, 0.5)", stroke: "rgb(6, 182, 212)", rgb: [6, 182, 212] },
   { fill: "rgba(132, 204, 22, 0.5)", stroke: "rgb(132, 204, 22)", rgb: [132, 204, 22] },
 ]
+
+interface ComplexValue {
+  re: number
+  im: number
+}
+
+function dftRealPositive(signal: Float32Array, bins: number): ComplexValue[] {
+  const n = signal.length
+  const out: ComplexValue[] = new Array(bins)
+  for (let k = 0; k < bins; k++) {
+    let re = 0
+    let im = 0
+    for (let i = 0; i < n; i++) {
+      const angle = (-2 * Math.PI * k * i) / n
+      const s = signal[i]
+      re += s * Math.cos(angle)
+      im += s * Math.sin(angle)
+    }
+    out[k] = { re, im }
+  }
+  return out
+}
+
+function dftComplex(input: ComplexValue[]): ComplexValue[] {
+  const n = input.length
+  const out: ComplexValue[] = new Array(n)
+  for (let k = 0; k < n; k++) {
+    let re = 0
+    let im = 0
+    for (let i = 0; i < n; i++) {
+      const angle = (-2 * Math.PI * k * i) / n
+      const c = Math.cos(angle)
+      const s = Math.sin(angle)
+      const v = input[i]
+      re += v.re * c - v.im * s
+      im += v.re * s + v.im * c
+    }
+    out[k] = { re, im }
+  }
+  return out
+}
+
+function sampleToLength(data: Float32Array, start: number, end: number, targetLength: number): Float32Array {
+  const out = new Float32Array(targetLength)
+  const span = Math.max(1, end - start)
+  for (let i = 0; i < targetLength; i++) {
+    const frac = targetLength === 1 ? 0 : i / (targetLength - 1)
+    const srcIdx = Math.min(end - 1, Math.max(start, Math.floor(start + frac * (span - 1))))
+    out[i] = data[srcIdx]
+  }
+  return out
+}
+
+function getSpectrumColor(value: number): [number, number, number] {
+  const t = Math.max(0, Math.min(1, value))
+  if (t < 0.25) {
+    const u = t / 0.25
+    return [10 + 20 * u, 15 + 55 * u, 40 + 120 * u]
+  }
+  if (t < 0.5) {
+    const u = (t - 0.25) / 0.25
+    return [30 + 30 * u, 70 + 70 * u, 160 + 50 * u]
+  }
+  if (t < 0.75) {
+    const u = (t - 0.5) / 0.25
+    return [60 + 170 * u, 140 + 70 * u, 210 - 110 * u]
+  }
+  const u = (t - 0.75) / 0.25
+  return [230 + 25 * u, 210 + 35 * u, 100 + 155 * u]
+}
 
 export function WaveformCanvas({
   seg2Data,
@@ -201,10 +271,10 @@ export function WaveformCanvas({
 
     // Layout: X axis = channels, Y axis = time (swapped from before)
     // In intensity mode, minimize margins for full image display
-    const leftMargin = displayMode === "intensity" ? 30 : 40
-    const rightMargin = displayMode === "intensity" ? 5 : 10
-    const topMargin = displayMode === "intensity" ? 10 : 30
-    const bottomMargin = displayMode === "intensity" ? 10 : 20
+    const leftMargin = displayMode === "waveform" ? 40 : displayMode === "intensity" ? 30 : 45
+    const rightMargin = displayMode === "waveform" ? 10 : displayMode === "intensity" ? 5 : 10
+    const topMargin = displayMode === "waveform" ? 30 : displayMode === "intensity" ? 10 : 12
+    const bottomMargin = displayMode === "waveform" ? 20 : displayMode === "intensity" ? 10 : 24
     const plotWidth = width - leftMargin - rightMargin
     const plotHeight = height - topMargin - bottomMargin
     const channelWidth = plotWidth / numChannels
@@ -222,20 +292,22 @@ export function WaveformCanvas({
     ctx.fillStyle = "#94a3b8"
     ctx.font = "10px monospace"
 
-    // Draw time axis (vertical, on left side)
-    ctx.textAlign = "right"
-    const numTimeLabels = Math.min(10, Math.floor(plotHeight / 40))
-    for (let i = 0; i <= numTimeLabels; i++) {
-      const y = topMargin + (plotHeight * i) / numTimeLabels
-      const time = visibleStartTime + (visibleDuration * i) / numTimeLabels
-      ctx.fillText(`${time.toFixed(3)}s`, leftMargin - 5, y + 3)
+    if (displayMode !== "fk-spectrum") {
+      // Draw time axis (vertical, on left side)
+      ctx.textAlign = "right"
+      const numTimeLabels = Math.min(10, Math.floor(plotHeight / 40))
+      for (let i = 0; i <= numTimeLabels; i++) {
+        const y = topMargin + (plotHeight * i) / numTimeLabels
+        const time = visibleStartTime + (visibleDuration * i) / numTimeLabels
+        ctx.fillText(`${time.toFixed(3)}s`, leftMargin - 5, y + 3)
 
-      // Horizontal grid lines
-      ctx.strokeStyle = "rgba(148, 163, 184, 0.1)"
-      ctx.beginPath()
-      ctx.moveTo(leftMargin, y)
-      ctx.lineTo(width - rightMargin, y)
-      ctx.stroke()
+        // Horizontal grid lines
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.1)"
+        ctx.beginPath()
+        ctx.moveTo(leftMargin, y)
+        ctx.lineTo(width - rightMargin, y)
+        ctx.stroke()
+      }
     }
 
     // Draw channel labels at top (only in waveform mode)
@@ -342,7 +414,7 @@ export function WaveformCanvas({
 
         ctx.restore()
       })
-    } else {
+    } else if (displayMode === "intensity") {
       // Intensity display mode
       // Create ImageData for the plot area
       const imageData = ctx.createImageData(Math.floor(plotWidth), Math.floor(plotHeight))
@@ -401,6 +473,112 @@ export function WaveformCanvas({
 
       // Draw the image data
       ctx.putImageData(imageData, leftMargin, topMargin)
+    } else {
+      const visibleByChannel: Float32Array[] = []
+      orderedChannels.forEach((channelIndex) => {
+        const processedData = processedTraces.get(channelIndex)
+        if (!processedData || processedData.length === 0) return
+        const startSample = Math.floor(viewStart * processedData.length)
+        const endSample = Math.max(startSample + 1, Math.ceil(viewEnd * processedData.length))
+        visibleByChannel.push(processedData.slice(startSample, endSample))
+      })
+
+      const channelCount = visibleByChannel.length
+      if (channelCount > 1) {
+        const targetChannels = Math.min(96, channelCount)
+        const minVisibleSamples = visibleByChannel.reduce((m, d) => Math.min(m, d.length), Number.MAX_SAFE_INTEGER)
+        const targetSamples = Math.max(16, Math.min(128, minVisibleSamples))
+
+        const channelStep = (channelCount - 1) / Math.max(1, targetChannels - 1)
+        const reducedTraces: Float32Array[] = []
+        for (let c = 0; c < targetChannels; c++) {
+          const sourceChannel = Math.round(c * channelStep)
+          const source = visibleByChannel[sourceChannel]
+          reducedTraces.push(sampleToLength(source, 0, source.length, targetSamples))
+        }
+
+        const freqBins = Math.floor(targetSamples / 2) + 1
+        const tfSpectra: ComplexValue[][] = reducedTraces.map((trace) => dftRealPositive(trace, freqBins))
+        const fkMagnitude = new Float32Array(freqBins * targetChannels)
+        let maxMag = 0
+
+        for (let f = 0; f < freqBins; f++) {
+          const spatialInput: ComplexValue[] = new Array(targetChannels)
+          for (let c = 0; c < targetChannels; c++) spatialInput[c] = tfSpectra[c][f]
+          const spatialSpectrum = dftComplex(spatialInput)
+          const shift = Math.floor(targetChannels / 2)
+          for (let k = 0; k < targetChannels; k++) {
+            const shiftedK = (k + shift) % targetChannels
+            const value = spatialSpectrum[k]
+            const mag = Math.hypot(value.re, value.im)
+            const index = f * targetChannels + shiftedK
+            fkMagnitude[index] = mag
+            if (mag > maxMag) maxMag = mag
+          }
+        }
+
+        const logMax = Math.log10(1 + maxMag)
+        const imageData = ctx.createImageData(Math.floor(plotWidth), Math.floor(plotHeight))
+        const pixels = imageData.data
+
+        for (let py = 0; py < Math.floor(plotHeight); py++) {
+          const yFrac = 1 - py / Math.max(1, Math.floor(plotHeight) - 1)
+          const fBin = Math.min(freqBins - 1, Math.max(0, Math.round(yFrac * (freqBins - 1))))
+          for (let px = 0; px < Math.floor(plotWidth); px++) {
+            const xFrac = px / Math.max(1, Math.floor(plotWidth) - 1)
+            const kBin = Math.min(targetChannels - 1, Math.max(0, Math.round(xFrac * (targetChannels - 1))))
+            const mag = fkMagnitude[fBin * targetChannels + kBin]
+            const norm = logMax > 0 ? Math.log10(1 + mag) / logMax : 0
+            const [r, g, b] = getSpectrumColor(norm)
+            const idx = (py * Math.floor(plotWidth) + px) * 4
+            pixels[idx] = r
+            pixels[idx + 1] = g
+            pixels[idx + 2] = b
+            pixels[idx + 3] = 255
+          }
+        }
+
+        ctx.putImageData(imageData, leftMargin, topMargin)
+
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.14)"
+        for (let i = 0; i <= 4; i++) {
+          const x = leftMargin + (plotWidth * i) / 4
+          const y = topMargin + (plotHeight * i) / 4
+          ctx.beginPath()
+          ctx.moveTo(x, topMargin)
+          ctx.lineTo(x, topMargin + plotHeight)
+          ctx.stroke()
+          ctx.beginPath()
+          ctx.moveTo(leftMargin, y)
+          ctx.lineTo(leftMargin + plotWidth, y)
+          ctx.stroke()
+        }
+
+        const nyquist = seg2Data.sampleRate / 2
+        ctx.fillStyle = "#94a3b8"
+        ctx.textAlign = "right"
+        ctx.font = "10px monospace"
+        for (let i = 0; i <= 4; i++) {
+          const y = topMargin + (plotHeight * i) / 4
+          const hz = nyquist * (1 - i / 4)
+          ctx.fillText(`${hz.toFixed(0)}Hz`, leftMargin - 5, y + 3)
+        }
+
+        ctx.textAlign = "center"
+        for (let i = 0; i <= 4; i++) {
+          const x = leftMargin + (plotWidth * i) / 4
+          const k = -0.5 + i * 0.25
+          ctx.fillText(`${k.toFixed(2)}`, x, topMargin + plotHeight + 12)
+        }
+
+        ctx.fillStyle = "#64748b"
+        ctx.textAlign = "left"
+        ctx.fillText("f-k Spectrum (k: cycles/channel)", leftMargin + 5, topMargin + 12)
+      } else {
+        ctx.fillStyle = "#94a3b8"
+        ctx.textAlign = "center"
+        ctx.fillText("f-k spectrum requires at least 2 channels", leftMargin + plotWidth / 2, topMargin + plotHeight / 2)
+      }
     }
 
     // Draw border

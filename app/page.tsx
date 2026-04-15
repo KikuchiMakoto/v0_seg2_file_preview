@@ -256,26 +256,34 @@ export default function SEG2Viewer() {
             <FileDropzone onFileLoad={handleFileLoad} />
 
             {/* Display Mode Toggle */}
-            <div className="flex gap-1">
-              <Button
-                variant={displayMode === "waveform" ? "default" : "outline"}
-                size="sm"
-                className={`flex-1 h-6 text-[10px] gap-1 ${displayMode === "waveform" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
-                onClick={() => setDisplayMode("waveform")}
-              >
-                <Waves size={12} />
-                Waveform
-              </Button>
-              <Button
-                variant={displayMode === "intensity" ? "default" : "outline"}
-                size="sm"
-                className={`flex-1 h-6 text-[10px] gap-1 ${displayMode === "intensity" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
-                onClick={() => setDisplayMode("intensity")}
-              >
-                <Grid3X3 size={12} />
-                Intensity
-              </Button>
-            </div>
+             <div className="flex gap-1">
+               <Button
+                 variant={displayMode === "waveform" ? "default" : "outline"}
+                 size="sm"
+                 className={`flex-1 h-6 text-[10px] gap-1 ${displayMode === "waveform" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
+                 onClick={() => setDisplayMode("waveform")}
+               >
+                 <Waves size={12} />
+                 Waveform
+               </Button>
+               <Button
+                 variant={displayMode === "intensity" ? "default" : "outline"}
+                 size="sm"
+                 className={`flex-1 h-6 text-[10px] gap-1 ${displayMode === "intensity" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
+                 onClick={() => setDisplayMode("intensity")}
+               >
+                 <Grid3X3 size={12} />
+                 Intensity
+               </Button>
+               <Button
+                 variant={displayMode === "fk-spectrum" ? "default" : "outline"}
+                 size="sm"
+                 className={`flex-1 h-6 text-[10px] ${displayMode === "fk-spectrum" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"}`}
+                 onClick={() => setDisplayMode("fk-spectrum")}
+               >
+                 F-K
+               </Button>
+             </div>
 
             {error && (
               <div className="p-1.5 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">
